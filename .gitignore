@@ -49,3 +49,9 @@ nginx/ssl/
 
 # Internal learning docs (not for public repo)
 docs/
+
+# User uploaded files
+backend/uploads/
+
+# Celery beat schedule (runtime artifact)
+backend/celerybeat-schedule
