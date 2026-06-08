@@ -24,4 +24,7 @@ export const authApi = {
     api.post<TokenResponse>("/auth/refresh", { refresh_token }).then((r) => r.data),
 
   me: () => api.get<User>("/auth/me").then((r) => r.data),
+
+  getOAuthUrl: (provider: string) =>
+    api.get<{ url: string }>(`/auth/oauth/${provider}/authorize`).then((r) => r.data),
 };

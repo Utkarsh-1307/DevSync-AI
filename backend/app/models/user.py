@@ -41,6 +41,10 @@ class User(BaseModel):
     email_verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    oauth_google_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    oauth_github_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    oauth_microsoft_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    oauth_provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     # Relationships
     workspace_memberships: Mapped[list["UserWorkspaceMembership"]] = relationship(

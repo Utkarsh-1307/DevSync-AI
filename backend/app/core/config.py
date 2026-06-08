@@ -50,6 +50,16 @@ class Settings(BaseSettings):
     DEFAULT_AI_MODEL: str = "claude-sonnet-4-6"
     AI_MAX_TOKENS: int = 4096
 
+    # OAuth providers
+    FRONTEND_URL: str = "http://localhost:3000"
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
+    MICROSOFT_CLIENT_ID: str = ""
+    MICROSOFT_CLIENT_SECRET: str = ""
+    MICROSOFT_TENANT_ID: str = "common"
+
     # Storage
     S3_BUCKET: str = ""
     S3_REGION: str = "us-east-1"

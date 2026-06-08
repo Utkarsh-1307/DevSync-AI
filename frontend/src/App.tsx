@@ -8,8 +8,10 @@ import { useSocketConnection } from "@/shared/hooks/useSocket";
 
 const LoginPage = lazy(() => import("./features/auth/LoginPage").then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import("./features/auth/RegisterPage").then((m) => ({ default: m.RegisterPage })));
+const OAuthCallbackPage = lazy(() => import("./features/auth/OAuthCallbackPage").then((m) => ({ default: m.OAuthCallbackPage })));
 const AppLayout = lazy(() => import("./layouts/AppLayout").then((m) => ({ default: m.AppLayout })));
 const CreateWorkspacePage = lazy(() => import("./features/workspace/CreateWorkspacePage").then((m) => ({ default: m.CreateWorkspacePage })));
+const OnboardingPage = lazy(() => import("./features/onboarding/OnboardingPage").then((m) => ({ default: m.OnboardingPage })));
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -50,6 +52,15 @@ export function App() {
                 <GuestGuard>
                   <RegisterPage />
                 </GuestGuard>
+              }
+            />
+            <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+            <Route
+              path="/onboarding"
+              element={
+                <AuthGuard>
+                  <OnboardingPage />
+                </AuthGuard>
               }
             />
             <Route

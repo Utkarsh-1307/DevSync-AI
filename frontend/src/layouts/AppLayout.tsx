@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Route, Routes, Link, useNavigate, useParams, useLocation, Navigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
-import { Hash, Bell, Bot, Plus, FolderKanban, LogOut, Lock, X, PlusCircle, MessageCircle } from "lucide-react";
+import {
+  Hash, Bell, Bot, Plus, LogOut, Lock, X, PlusCircle, MessageCircle,
+  Home, BarChart2, FolderKanban, Users, Share2, CheckSquare,
+  AlertCircle, Layers, Clock, CalendarDays, UserPlus, ChevronDown, ChevronRight as ChevronRightIcon,
+  Contact,
+} from "lucide-react";
 import { Avatar } from "@/shared/components/ui/Avatar";
-import { Button } from "@/shared/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useWorkspaces } from "@/features/workspace/hooks";
@@ -18,6 +22,15 @@ import { NotificationsPage } from "@/features/notifications/NotificationsPage";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { useLogout } from "@/features/auth/hooks";
 import type { Channel } from "@/types";
+
+const HomePage = lazy(() => import("@/features/home/HomePage"));
+const ReportsPage = lazy(() => import("@/features/reports/ReportsPage"));
+const ApprovalsPage = lazy(() => import("@/features/approvals/ApprovalsPage"));
+const UsersPage = lazy(() => import("@/features/users/UsersPage"));
+const IssuesPage = lazy(() => import("@/features/issues/IssuesPage"));
+const PhasesPage = lazy(() => import("@/features/phases/PhasesPage"));
+const TimeLogsPage = lazy(() => import("@/features/time-logs/TimeLogsPage"));
+const TimesheetsPage = lazy(() => import("@/features/timesheets/TimesheetsPage"));
 
 function CreateChannelModal({ workspaceId, onClose }: { workspaceId: string; onClose: () => void }) {
   const [name, setName] = useState("");
@@ -307,6 +320,37 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
   );
 }
 
+function NavItem({
+  to,
+  icon: Icon,
+  label,
+  badge,
+}: {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+  badge?: number;
+}) {
+  const location = useLocation();
+  const active = location.pathname === to || location.pathname.startsWith(to + "/");
+  return (
+    <Link
+      to={to}
+      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors group ${
+        active ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"
+      }`}
+    >
+      <Icon className="h-4 w-4 flex-shrink-0" />
+      <span className="flex-1 truncate">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className="bg-red-500 text-white text-xs font-semibold rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 function Sidebar({ workspaceId }: { workspaceId: string }) {
   const location = useLocation();
   const { data: channels = [] } = useChannels(workspaceId);
@@ -320,115 +364,59 @@ function Sidebar({ workspaceId }: { workspaceId: string }) {
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showNewDM, setShowNewDM] = useState(false);
+  const [overviewOpen, setOverviewOpen] = useState(true);
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const { data: wsMembers = [] } = useWorkspaceMembers(workspaceId);
+  const navigate = useNavigate();
+  const workspace = useWorkspaceStore((s) => s.activeWorkspace);
 
-  // For each DM channel, find the other user's name/avatar for display
   function dmDisplayUser(ch: Channel) {
     if (!user || !ch.members?.length) return null;
     return ch.members.find((m) => m.id !== user.id) ?? ch.members[0];
   }
 
+  // Trial days remaining based on workspace created_at
+  const trialDaysLeft = workspace?.created_at
+    ? Math.max(0, 15 - Math.floor((Date.now() - new Date(workspace.created_at).getTime()) / 86400000))
+    : 15;
+
   return (
     <>
-      <aside className="w-64 flex-shrink-0 bg-gray-900 dark:bg-gray-950 text-gray-200 flex flex-col h-full">
+      <aside className="w-64 flex-shrink-0 bg-gray-900 text-gray-200 flex flex-col h-full select-none">
         <WorkspaceSwitcher workspaceId={workspaceId} />
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-4">
-          <nav className="space-y-0.5">
-            <Link
-              to={`/w/${workspaceId}/notifications`}
-              className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
-                location.pathname === `/w/${workspaceId}/notifications`
-                  ? "bg-brand-700 text-white"
-                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
-              }`}
-            >
-              <Bell className="h-4 w-4 flex-shrink-0" />
-              Notifications
-              {unreadCount > 0 && (
-                <span className="ml-auto bg-red-500 text-white text-xs font-semibold rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-            </Link>
-          </nav>
+        <div className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
+          {/* Top nav items */}
+          <NavItem to={`/w/${workspaceId}/home`} icon={Home} label="Home" />
+          <NavItem to={`/w/${workspaceId}/notifications`} icon={Bell} label="Notifications" badge={unreadCount} />
+          <NavItem to={`/w/${workspaceId}/reports`} icon={BarChart2} label="Reports" />
 
-          {/* Channels */}
-          <div>
-            <div className="flex items-center justify-between px-2 mb-1">
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Channels</span>
-              <button type="button" onClick={() => setShowCreateChannel(true)} className="text-gray-400 hover:text-white transition-colors" title="Create channel" aria-label="Create channel">
+          {/* Projects section */}
+          <div className="pt-2">
+            <div className="flex items-center justify-between px-3 mb-1">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Projects</span>
+              <button
+                type="button"
+                onClick={() => setShowCreateProject(true)}
+                className="text-gray-500 hover:text-gray-200 transition-colors"
+                aria-label="Create project"
+              >
                 <Plus className="h-3.5 w-3.5" />
               </button>
             </div>
-            {channels.length === 0 && <p className="text-xs text-gray-500 px-2 py-1">No channels yet</p>}
-            {channels.map((ch) => {
-              const Icon = ch.channel_type === "private" ? Lock : Hash;
-              const path = `/w/${workspaceId}/c/${ch.id}`;
-              return (
-                <Link
-                  key={ch.id}
-                  to={path}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
-                    location.pathname === path ? "bg-brand-700 text-white" : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                  }`}
-                >
-                  <Icon className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">{ch.name}</span>
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Direct Messages */}
-          <div>
-            <div className="flex items-center justify-between px-2 mb-1">
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Direct Messages</span>
-              <button type="button" onClick={() => setShowNewDM(true)} className="text-gray-400 hover:text-white transition-colors" title="New direct message" aria-label="New direct message">
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            {dms.length === 0 && (
-              <p className="text-xs text-gray-500 px-2 py-1">No direct messages yet</p>
+            {projects.length === 0 && (
+              <p className="text-xs text-gray-600 px-3 py-1">No projects yet</p>
             )}
-            {dms.map((ch) => {
-              const other = dmDisplayUser(ch);
-              const path = `/w/${workspaceId}/c/${ch.id}`;
-              return (
-                <Link
-                  key={ch.id}
-                  to={path}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
-                    location.pathname === path ? "bg-brand-700 text-white" : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                  }`}
-                >
-                  {other ? (
-                    <Avatar user={other} size="xs" />
-                  ) : (
-                    <MessageCircle className="h-4 w-4 flex-shrink-0 text-gray-400" />
-                  )}
-                  <span className="truncate">{other?.full_name ?? "Direct Message"}</span>
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Projects */}
-          <div>
-            <div className="flex items-center justify-between px-2 mb-1">
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Projects</span>
-              <button type="button" onClick={() => setShowCreateProject(true)} className="text-gray-400 hover:text-white transition-colors" title="Create project" aria-label="Create project">
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            {projects.length === 0 && <p className="text-xs text-gray-500 px-2 py-1">No projects yet</p>}
             {projects.map((p) => {
               const path = `/w/${workspaceId}/projects/${p.id}`;
+              const active = location.pathname.startsWith(path);
               return (
                 <Link
                   key={p.id}
                   to={path}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
-                    location.pathname.startsWith(path) ? "bg-brand-700 text-white" : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    active ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"
                   }`}
                 >
                   <span className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
@@ -437,15 +425,115 @@ function Sidebar({ workspaceId }: { workspaceId: string }) {
               );
             })}
           </div>
+
+          <NavItem to={`/w/${workspaceId}/users`} icon={Users} label="Users" />
+
+          {/* Collaboration (channels + DMs) */}
+          <div className="pt-2">
+            <div className="flex items-center justify-between px-3 mb-1">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Collaboration</span>
+              <button
+                type="button"
+                onClick={() => setShowCreateChannel(true)}
+                className="text-gray-500 hover:text-gray-200 transition-colors"
+                aria-label="Create channel"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            {channels.map((ch) => {
+              const Icon = ch.channel_type === "private" ? Lock : Hash;
+              const path = `/w/${workspaceId}/c/${ch.id}`;
+              const active = location.pathname === path;
+              return (
+                <Link
+                  key={ch.id}
+                  to={path}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    active ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">{ch.name}</span>
+                </Link>
+              );
+            })}
+            {channels.length === 0 && <p className="text-xs text-gray-600 px-3 py-1">No channels yet</p>}
+          </div>
+
+          <NavItem to={`/w/${workspaceId}/approvals`} icon={CheckSquare} label="My Approvals" />
+
+          {/* Overview collapsible */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setOverviewOpen((o) => !o)}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            >
+              <span className="font-semibold text-xs uppercase tracking-wider text-gray-500">Overview</span>
+              {overviewOpen ? (
+                <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
+              ) : (
+                <ChevronRightIcon className="h-3.5 w-3.5 text-gray-500" />
+              )}
+            </button>
+            {overviewOpen && (
+              <div className="ml-2 space-y-0.5 mt-0.5">
+                <NavItem to={`/w/${workspaceId}/tasks`} icon={CheckSquare} label="Tasks" />
+                <NavItem to={`/w/${workspaceId}/issues`} icon={AlertCircle} label="Issues" />
+                <NavItem to={`/w/${workspaceId}/phases`} icon={Layers} label="Phases" />
+                <NavItem to={`/w/${workspaceId}/time-logs`} icon={Clock} label="Time Logs" />
+                <NavItem to={`/w/${workspaceId}/timesheets`} icon={CalendarDays} label="Timesheets" />
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Invite + Trial badge */}
+        <div className="px-2 py-2 border-t border-gray-800 space-y-2">
+          <button
+            type="button"
+            onClick={() => setShowInvite(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+          >
+            <UserPlus className="h-4 w-4 text-brand-400" />
+            <span>Invite Users</span>
+            {trialDaysLeft > 0 && (
+              <span className="ml-auto text-xs font-medium px-1.5 py-0.5 rounded-full bg-yellow-900 text-yellow-300">
+                {trialDaysLeft}d left
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Chats / Contacts bottom bar */}
+        <div className="flex items-stretch border-t border-gray-800">
+          <button
+            type="button"
+            onClick={() => setShowNewDM(true)}
+            className="flex-1 flex flex-col items-center gap-1 py-3 text-gray-500 hover:text-white hover:bg-gray-800 transition-colors text-xs"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Chats
+          </button>
+          <div className="w-px bg-gray-800" />
+          <button
+            type="button"
+            onClick={() => navigate(`/w/${workspaceId}/users`)}
+            className="flex-1 flex flex-col items-center gap-1 py-3 text-gray-500 hover:text-white hover:bg-gray-800 transition-colors text-xs"
+          >
+            <Contact className="h-4 w-4" />
+            Contacts
+          </button>
+        </div>
+
+        {/* User profile strip */}
         {user && (
-          <div className="p-3 border-t border-gray-700 flex items-center gap-2">
+          <div className="p-3 border-t border-gray-800 flex items-center gap-2">
             <button
               type="button"
               onClick={() => setShowProfile(true)}
               className="flex-shrink-0 rounded-full ring-2 ring-transparent hover:ring-brand-500 transition-all"
-              title="Edit profile"
               aria-label="Edit profile"
             >
               <Avatar user={user} size="sm" />
@@ -454,7 +542,12 @@ function Sidebar({ workspaceId }: { workspaceId: string }) {
               <p className="text-xs font-medium text-gray-200 truncate">{user.full_name}</p>
               <p className="text-xs text-gray-400 truncate">{user.email}</p>
             </div>
-            <button type="button" onClick={logout} className="text-gray-400 hover:text-red-400 transition-colors" title="Log out" aria-label="Log out">
+            <button
+              type="button"
+              onClick={logout}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              aria-label="Log out"
+            >
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -465,6 +558,32 @@ function Sidebar({ workspaceId }: { workspaceId: string }) {
       {showCreateProject && <CreateProjectModal workspaceId={workspaceId} onClose={() => setShowCreateProject(false)} />}
       {showNewDM && <NewDMModal workspaceId={workspaceId} onClose={() => setShowNewDM(false)} />}
       {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+
+      {/* Invite modal */}
+      {showInvite && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowInvite(false)}>
+          <div className="bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-white">Invite to Workspace</h2>
+              <button type="button" aria-label="Close" onClick={() => setShowInvite(false)}><X className="h-4 w-4 text-gray-400" /></button>
+            </div>
+            <input
+              autoFocus
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="colleague@company.com"
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-brand-500 mb-3"
+            />
+            <button
+              type="button"
+              onClick={() => { setShowInvite(false); setInviteEmail(""); }}
+              className="w-full px-4 py-2 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium text-white transition-colors"
+            >
+              Send Invite
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -487,30 +606,47 @@ function ProjectRouteView({ workspaceId }: { workspaceId: string }) {
   return <ProjectBoard workspaceId={workspaceId} projectId={project.id} projectName={project.name} />;
 }
 
+const PageFallback = () => (
+  <div className="flex h-full items-center justify-center bg-gray-950">
+    <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+  </div>
+);
+
 function WorkspaceContent({ workspaceId }: { workspaceId: string }) {
   const { data: channels = [], isLoading } = useChannels(workspaceId);
 
   return (
-    <Routes>
-      <Route
-        index
-        element={
-          isLoading ? null : channels.length > 0 ? (
-            <Navigate to={`/w/${workspaceId}/c/${channels[0].id}`} replace />
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-400">
-              <div className="text-center">
-                <Hash className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                <p className="text-sm">Click <strong>+</strong> next to Channels to get started</p>
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+        <Route
+          index
+          element={
+            isLoading ? null : channels.length > 0 ? (
+              <Navigate to={`/w/${workspaceId}/c/${channels[0].id}`} replace />
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-gray-400">
+                <div className="text-center">
+                  <Hash className="h-16 w-16 mx-auto mb-4 opacity-20" />
+                  <p className="text-sm">Click <strong>+</strong> next to Channels to get started</p>
+                </div>
               </div>
-            </div>
-          )
-        }
-      />
-      <Route path="c/:channelId" element={<ChannelRouteView workspaceId={workspaceId} />} />
-      <Route path="projects/:projectId" element={<ProjectRouteView workspaceId={workspaceId} />} />
-      <Route path="notifications" element={<NotificationsPage workspaceId={workspaceId} />} />
-    </Routes>
+            )
+          }
+        />
+        <Route path="c/:channelId" element={<ChannelRouteView workspaceId={workspaceId} />} />
+        <Route path="projects/:projectId" element={<ProjectRouteView workspaceId={workspaceId} />} />
+        <Route path="notifications" element={<NotificationsPage workspaceId={workspaceId} />} />
+        <Route path="home" element={<HomePage />} />
+        <Route path="reports" element={<ReportsPage />} />
+        <Route path="approvals" element={<ApprovalsPage />} />
+        <Route path="users" element={<UsersPage workspaceId={workspaceId} />} />
+        <Route path="issues" element={<IssuesPage workspaceId={workspaceId} />} />
+        <Route path="phases" element={<PhasesPage workspaceId={workspaceId} />} />
+        <Route path="time-logs" element={<TimeLogsPage workspaceId={workspaceId} />} />
+        <Route path="timesheets" element={<TimesheetsPage workspaceId={workspaceId} />} />
+        <Route path="tasks" element={<Navigate to={`/w/${workspaceId}`} replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 
@@ -527,14 +663,14 @@ export function AppLayout() {
     return null;
   }
 
+  if (!activeWorkspace && workspaces && workspaces.length === 0) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   if (!activeWorkspace) {
     return (
       <div className="flex h-full items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <FolderKanban className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-          <p className="text-gray-500 mb-4 text-sm">No workspaces yet.</p>
-          <Button onClick={() => navigate("/new-workspace")}>Create Workspace</Button>
-        </div>
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
       </div>
     );
   }

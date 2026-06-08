@@ -56,6 +56,9 @@ class Task(BaseModel):
     parent_task_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    phase_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("phases.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[TaskStatus] = mapped_column(
@@ -98,6 +101,9 @@ class Task(BaseModel):
     )
     labels: Mapped[list["TaskLabel"]] = relationship(
         "TaskLabel", back_populates="task", cascade="all, delete-orphan"
+    )
+    phase: Mapped["Phase | None"] = relationship(
+        "Phase", back_populates="tasks", foreign_keys=[phase_id]
     )
 
 

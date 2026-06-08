@@ -173,6 +173,70 @@ export interface Notification {
   updated_at: string;
 }
 
+// --- Issues ---
+export type IssueStatus = "open" | "in_progress" | "resolved" | "closed";
+export type IssuePriority = "critical" | "high" | "medium" | "low";
+
+export interface IssueLabel {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface Issue {
+  id: string;
+  workspace_id: string;
+  project_id: string;
+  title: string;
+  description: string | null;
+  status: IssueStatus;
+  priority: IssuePriority;
+  assignee: UserSummary | null;
+  reporter: UserSummary;
+  due_date: string | null;
+  resolved_at: string | null;
+  labels: IssueLabel[];
+  created_at: string;
+  updated_at: string;
+}
+
+// --- Phases ---
+export type PhaseStatus = "planned" | "active" | "completed";
+
+export interface Phase {
+  id: string;
+  workspace_id: string;
+  project_id: string;
+  name: string;
+  description: string | null;
+  status: PhaseStatus;
+  start_date: string | null;
+  end_date: string | null;
+  task_count: number;
+  created_at: string;
+}
+
+// --- Time Logs ---
+export interface TimeLog {
+  id: string;
+  workspace_id: string;
+  project_id: string;
+  task_id: string;
+  task: { id: string; title: string };
+  user: UserSummary;
+  description: string | null;
+  hours: number;
+  logged_date: string;
+  created_at: string;
+}
+
+export interface TimesheetEntry {
+  user: UserSummary;
+  week_start: string;
+  total_hours: number;
+  daily_hours: Record<string, number>;
+}
+
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;
