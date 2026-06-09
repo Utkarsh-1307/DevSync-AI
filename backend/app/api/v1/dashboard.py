@@ -109,7 +109,6 @@ async def get_dashboard(
         select(Task)
         .where(
             Task.workspace_id == workspace_id,
-            Task.assignee_id == current_user.id,
             Task.status.in_(open_task_statuses),
         )
         .order_by(Task.created_at.desc())

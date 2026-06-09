@@ -3,10 +3,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
+from uuid import UUID
 
 from app.api.v1 import auth, workspaces, projects, tasks, channels, notifications, ai, upload, search, oauth, issues, phases, time_logs, dashboard, audit
 from app.core.config import settings
@@ -18,8 +19,6 @@ from app.core.exceptions import (
 )
 from app.core.logging import setup_logging
 from app.websockets.handlers import websocket_endpoint
-from fastapi import WebSocket
-from uuid import UUID
 
 
 @asynccontextmanager

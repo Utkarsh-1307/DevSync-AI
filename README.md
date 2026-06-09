@@ -1,6 +1,6 @@
 # DevSync AI
 
-> AI-powered real-time team collaboration platform — channels, DMs, task boards, file uploads, and an integrated AI assistant.
+> AI-powered real-time team collaboration platform — channels, DMs, kanban task boards, issue tracking, phases, time logging, audit logs, and an integrated AI assistant.
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi)
@@ -23,6 +23,15 @@
 | **Auth** | JWT access + refresh tokens, bcrypt passwords, role-based access (owner / admin / member / guest) |
 | **Search** | PostgreSQL full-text search across tasks and messages with relevance ranking |
 | **Admin Tools** | Remove members from channels or workspaces, manage channel visibility, set task deadlines |
+| **Issues** | Issue tracker per project with status, priority, assignee, and due date |
+| **Phases** | Project phase/milestone tracking with start/end dates and status |
+| **Time Logs** | Log time against tasks with duration and notes |
+| **Timesheets** | Weekly timesheet view aggregating time logs by user |
+| **Approvals** | Approval request workflow with status tracking |
+| **Reports** | Workspace-level reporting and analytics dashboard |
+| **Audit Logs** | Immutable append-only audit trail of all significant actions (tasks, projects, workspaces, auth events) — admin-only, filterable by action and date range |
+| **Request Tracing** | Every API request tagged with `X-Request-ID`, latency logged, request ID included in error responses for easy debugging |
+| **Task Timers** | Per-task stopwatch timer on every kanban card, state persisted in localStorage across sessions |
 
 ---
 

@@ -181,10 +181,10 @@ export default function HomePage({ workspaceId }: Props) {
 
         {/* Widgets row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* My Tasks widget — Kanban board */}
+          {/* Open Tasks widget — Kanban board */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl flex flex-col min-h-[320px]">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
-              <span className="text-sm font-semibold text-gray-200">My Tasks</span>
+              <span className="text-sm font-semibold text-gray-200">Open Tasks</span>
               {stats && stats.my_tasks.length > 0 && (
                 <span className="text-xs bg-gray-700 text-gray-300 rounded-full px-2 py-0.5">
                   {stats.my_tasks.length}
@@ -197,7 +197,7 @@ export default function HomePage({ workspaceId }: Props) {
                   <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
                 </div>
               ) : !stats || stats.my_tasks.length === 0 ? (
-                <EmptyWidget icon={ClipboardList} message="No Tasks assigned to you yet." />
+                <EmptyWidget icon={ClipboardList} message="No open tasks in this workspace yet." />
               ) : (
                 <TaskKanbanBoard tasks={stats.my_tasks} />
               )}

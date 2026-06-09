@@ -533,10 +533,11 @@ function Sidebar({ workspaceId, collapsed, onToggle }: { workspaceId: string; co
                 <NavItem to={`/w/${workspaceId}/phases`} icon={Layers} label="Phases" collapsed={collapsed} />
                 <NavItem to={`/w/${workspaceId}/time-logs`} icon={Clock} label="Time Logs" collapsed={collapsed} />
                 <NavItem to={`/w/${workspaceId}/timesheets`} icon={CalendarDays} label="Timesheets" collapsed={collapsed} />
-                <NavItem to={`/w/${workspaceId}/audit-logs`} icon={Shield} label="Audit Logs" collapsed={collapsed} />
               </div>
             )}
           </div>
+
+          <NavItem to={`/w/${workspaceId}/audit-logs`} icon={Shield} label="Audit Logs" collapsed={collapsed} />
         </div>
 
         {/* Invite + Trial badge */}

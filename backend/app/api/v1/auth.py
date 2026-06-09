@@ -2,7 +2,6 @@ from fastapi import APIRouter, Request
 
 from app.api.deps import CurrentUser, DB
 from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse
-from app.schemas.common import MessageResponse
 from app.schemas.user import UpdateProfileRequest, UserProfile
 from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
