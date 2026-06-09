@@ -1,16 +1,14 @@
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel as PydanticBase
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import get_current_user, get_db, require_workspace_member
+from app.api.deps import CurrentUser, DB, WorkspaceMember
 from app.models import Phase, PhaseStatus
 from app.models.task import Task
-from app.models.user import User
 
 router = APIRouter(tags=["phases"])
 
@@ -52,7 +50,7 @@ async def _get_phase_or_404(
     phase_id: uuid.UUID,
     project_id: uuid.UUID,
     workspace_id: uuid.UUID,
-    db: AsyncSession,
+    db,
 ) -> Phase:
     result = await db.execute(
         select(Phase)
@@ -90,9 +88,9 @@ async def create_phase(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     body: PhaseCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    _: None = Depends(require_workspace_member),
+    db: DB,
+    _current_user: CurrentUser,
+    _: WorkspaceMember,
 ):
     phase = Phase(
         workspace_id=workspace_id,
@@ -115,9 +113,8 @@ async def create_phase(
 async def list_phases(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
-    __: None = Depends(require_workspace_member),
+    db: DB,
+    _: WorkspaceMember,
 ):
     result = await db.execute(
         select(Phase)
@@ -137,9 +134,8 @@ async def update_phase(
     project_id: uuid.UUID,
     phase_id: uuid.UUID,
     body: PhaseUpdate,
-    db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
-    __: None = Depends(require_workspace_member),
+    db: DB,
+    _: WorkspaceMember,
 ):
     phase = await _get_phase_or_404(phase_id, project_id, workspace_id, db)
     for field, val in body.model_dump(exclude_none=True).items():
@@ -156,9 +152,8 @@ async def delete_phase(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     phase_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
-    __: None = Depends(require_workspace_member),
+    db: DB,
+    _: WorkspaceMember,
 ):
     phase = await _get_phase_or_404(phase_id, project_id, workspace_id, db)
     await db.delete(phase)
@@ -174,9 +169,8 @@ async def assign_task_to_phase(
     project_id: uuid.UUID,
     phase_id: uuid.UUID,
     task_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
-    __: None = Depends(require_workspace_member),
+    db: DB,
+    _: WorkspaceMember,
 ):
     await _get_phase_or_404(phase_id, project_id, workspace_id, db)
     result = await db.execute(select(Task).where(Task.id == task_id, Task.project_id == project_id))
@@ -196,9 +190,8 @@ async def remove_task_from_phase(
     project_id: uuid.UUID,
     phase_id: uuid.UUID,
     task_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
-    __: None = Depends(require_workspace_member),
+    db: DB,
+    _: WorkspaceMember,
 ):
     result = await db.execute(
         select(Task).where(Task.id == task_id, Task.phase_id == phase_id, Task.project_id == project_id)

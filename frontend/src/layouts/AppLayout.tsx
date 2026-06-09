@@ -23,6 +23,7 @@ import { useUnreadCount } from "@/features/notifications/hooks";
 import { useLogout } from "@/features/auth/hooks";
 
 const HomePage = lazy(() => import("@/features/home/HomePage"));
+const WorkspaceTasksPage = lazy(() => import("@/features/tasks/WorkspaceTasksPage"));
 const ReportsPage = lazy(() => import("@/features/reports/ReportsPage"));
 const ApprovalsPage = lazy(() => import("@/features/approvals/ApprovalsPage"));
 const UsersPage = lazy(() => import("@/features/users/UsersPage"));
@@ -295,7 +296,7 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
           <div className="absolute left-0 top-full w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 py-1 mt-0.5">
             <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Workspaces</p>
             {allWorkspaces.map((ws) => (
-              <div key={ws.id} className="flex items-center group">
+              <div key={ws.id} className="flex items-center">
                 <button
                   type="button"
                   onClick={() => switchTo(ws)}
@@ -312,7 +313,7 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
                   title="Delete workspace"
                   aria-label="Delete workspace"
                   onClick={() => handleDelete(ws)}
-                  className="opacity-0 group-hover:opacity-100 px-2 py-2 text-gray-500 hover:text-red-400 transition-all"
+                  className="px-2 py-2 text-gray-500 hover:text-red-400 transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -388,6 +389,14 @@ function Sidebar({ workspaceId, collapsed, onToggle }: { workspaceId: string; co
   const [inviteEmail, setInviteEmail] = useState("");
   const navigate = useNavigate();
   const workspace = useWorkspaceStore((s) => s.activeWorkspace);
+  const deleteWorkspace = useDeleteWorkspace();
+
+  async function handleDeleteWorkspace() {
+    if (!workspace) return;
+    if (!confirm(`Delete workspace "${workspace.name}"? This cannot be undone.`)) return;
+    await deleteWorkspace.mutateAsync(workspace.id);
+    navigate("/onboarding");
+  }
 
   // Trial days remaining based on workspace created_at
   const trialDaysLeft = workspace?.created_at
@@ -560,6 +569,35 @@ function Sidebar({ workspaceId, collapsed, onToggle }: { workspaceId: string; co
           </div>
         )}
 
+        {/* Delete workspace */}
+        {!collapsed && (
+          <div className="px-2 py-1.5 border-t border-gray-800">
+            <button
+              type="button"
+              onClick={handleDeleteWorkspace}
+              disabled={deleteWorkspace.isPending}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-500 hover:text-red-400 hover:bg-red-950/40 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Delete Workspace</span>
+            </button>
+          </div>
+        )}
+        {collapsed && (
+          <div className="px-2 py-1.5 border-t border-gray-800 flex justify-center">
+            <button
+              type="button"
+              title="Delete Workspace"
+              aria-label="Delete Workspace"
+              onClick={handleDeleteWorkspace}
+              disabled={deleteWorkspace.isPending}
+              className="p-2 rounded-lg text-red-600 hover:text-red-400 hover:bg-red-950/40 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         {/* Chats / Contacts bottom bar */}
         <div className={`flex items-stretch border-t border-gray-800 ${collapsed ? "flex-col" : ""}`}>
           <button
@@ -704,7 +742,7 @@ function WorkspaceContent({ workspaceId }: { workspaceId: string }) {
         <Route path="phases" element={<PhasesPage workspaceId={workspaceId} />} />
         <Route path="time-logs" element={<TimeLogsPage workspaceId={workspaceId} />} />
         <Route path="timesheets" element={<TimesheetsPage workspaceId={workspaceId} />} />
-        <Route path="tasks" element={<Navigate to={`/w/${workspaceId}`} replace />} />
+        <Route path="tasks" element={<WorkspaceTasksPage workspaceId={workspaceId} />} />
       </Routes>
     </Suspense>
   );

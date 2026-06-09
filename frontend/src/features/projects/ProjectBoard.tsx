@@ -362,8 +362,6 @@ export function ProjectBoard({ workspaceId, projectId, projectName }: Props) {
                     <TaskCard
                       key={task.id}
                       task={task}
-                      workspaceId={workspaceId}
-                      projectId={projectId}
                       onDelete={() => {
                         if (confirm(`Delete "${task.title}"?`)) deleteTask.mutate(task.id);
                       }}

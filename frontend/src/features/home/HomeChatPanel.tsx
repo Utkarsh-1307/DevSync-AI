@@ -121,13 +121,13 @@ export function HomeChatPanel({ workspaceId }: Props) {
           </div>
         ) : (
           messages.map((msg) => {
-            const isMine = msg.sender?.id === user?.id;
+            const isMine = msg.author?.id === user?.id;
             return (
               <div key={msg.id} className={`flex gap-2.5 ${isMine ? "flex-row-reverse" : ""}`}>
-                {msg.sender && <Avatar user={msg.sender} size="sm" />}
+                {msg.author && <Avatar user={msg.author} size="sm" />}
                 <div className={`flex flex-col gap-1 max-w-[75%] ${isMine ? "items-end" : "items-start"}`}>
                   <div className="flex items-baseline gap-1.5">
-                    {!isMine && <span className="text-xs font-medium text-gray-300">{msg.sender?.full_name}</span>}
+                    {!isMine && <span className="text-xs font-medium text-gray-300">{msg.author?.full_name}</span>}
                     <span className="text-xs text-gray-600">{format(new Date(msg.created_at), "HH:mm")}</span>
                   </div>
                   {msg.content && (
@@ -142,11 +142,11 @@ export function HomeChatPanel({ workspaceId }: Props) {
                   {msg.attachments?.map((att) => {
                     const isImage = att.content_type.startsWith("image/");
                     return isImage ? (
-                      <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer">
+                      <a key={att.url} href={att.url} target="_blank" rel="noopener noreferrer">
                         <img src={att.url} alt={att.filename} className="max-w-[200px] max-h-48 rounded-lg border border-gray-700 object-cover hover:opacity-90 transition-opacity" />
                       </a>
                     ) : (
-                      <a key={att.id} href={att.url} download={att.filename} target="_blank" rel="noopener noreferrer"
+                      <a key={att.url} href={att.url} download={att.filename} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 hover:bg-gray-700 transition-colors text-xs text-gray-300 max-w-[200px]">
                         <Download className="h-4 w-4 text-brand-400 flex-shrink-0" />
                         <span className="truncate">{att.filename}</span>
@@ -166,7 +166,7 @@ export function HomeChatPanel({ workspaceId }: Props) {
         <div className="px-4 pb-2 flex flex-wrap gap-2">
           {pendingAttachments.map((att, i) => (
             <AttachmentPreview
-              key={att.id}
+              key={`${att.url}-${i}`}
               att={att}
               onRemove={() => setPendingAttachments((prev) => prev.filter((_, idx) => idx !== i))}
             />

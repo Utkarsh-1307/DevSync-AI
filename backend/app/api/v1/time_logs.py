@@ -1,17 +1,15 @@
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel as PydanticBase
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import get_current_user, get_db, require_workspace_member
+from app.api.deps import CurrentUser, DB, WorkspaceMember
 from app.models import TimeLog
 from app.models.task import Task
-from app.models.user import User
 
 router = APIRouter(tags=["time-logs"])
 
@@ -63,7 +61,7 @@ def _load_opts():
     return [selectinload(TimeLog.user), selectinload(TimeLog.task)]
 
 
-async def _get_log_or_404(log_id: uuid.UUID, task_id: uuid.UUID, db: AsyncSession) -> TimeLog:
+async def _get_log_or_404(log_id: uuid.UUID, task_id: uuid.UUID, db) -> TimeLog:
     result = await db.execute(
         select(TimeLog).where(TimeLog.id == log_id, TimeLog.task_id == task_id).options(*_load_opts())
     )
@@ -85,9 +83,9 @@ async def log_time(
     project_id: uuid.UUID,
     task_id: uuid.UUID,
     body: TimeLogCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    _: None = Depends(require_workspace_member),
+    current_user: CurrentUser,
+    db: DB,
+    _: WorkspaceMember,
 ):
     result = await db.execute(select(Task).where(Task.id == task_id, Task.project_id == project_id))
     if not result.scalar_one_or_none():
@@ -115,9 +113,8 @@ async def list_time_logs(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     task_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
-    __: None = Depends(require_workspace_member),
+    db: DB,
+    _: WorkspaceMember,
 ):
     result = await db.execute(
         select(TimeLog)
@@ -137,9 +134,9 @@ async def delete_time_log(
     project_id: uuid.UUID,
     task_id: uuid.UUID,
     log_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    _: None = Depends(require_workspace_member),
+    current_user: CurrentUser,
+    db: DB,
+    _: WorkspaceMember,
 ):
     log = await _get_log_or_404(log_id, task_id, db)
     if log.user_id != current_user.id:
@@ -154,10 +151,9 @@ async def delete_time_log(
 )
 async def get_timesheets(
     workspace_id: uuid.UUID,
+    db: DB,
+    _: WorkspaceMember,
     week_start: Optional[date] = Query(None, description="ISO date of Monday (defaults to current week)"),
-    db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
-    __: None = Depends(require_workspace_member),
 ):
     if not week_start:
         today = date.today()
@@ -177,13 +173,12 @@ async def get_timesheets(
     )
     logs = result.scalars().all()
 
-    # Group by user
     by_user: dict[uuid.UUID, list[TimeLog]] = {}
     for log in logs:
         by_user.setdefault(log.user_id, []).append(log)
 
     entries: list[TimesheetEntry] = []
-    for user_id, user_logs in by_user.items():
+    for _user_id, user_logs in by_user.items():
         user = user_logs[0].user
         daily: dict[str, float] = {}
         total = 0.0

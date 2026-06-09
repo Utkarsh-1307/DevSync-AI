@@ -1,16 +1,14 @@
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel as PydanticBase
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db, require_workspace_member
+from app.api.deps import CurrentUser, DB, WorkspaceMember
 from app.models.issue import Issue, IssueStatus, IssuePriority
 from app.models.phase import Phase, PhaseStatus
 from app.models.task import Task, TaskStatus, TaskPriority
-from app.models.user import User
 
 router = APIRouter(tags=["dashboard"])
 
@@ -56,9 +54,9 @@ class DashboardStats(PydanticBase):
 )
 async def get_dashboard(
     workspace_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    _: None = Depends(require_workspace_member),
+    current_user: CurrentUser,
+    db: DB,
+    _: WorkspaceMember,
 ):
     open_task_statuses = [
         TaskStatus.BACKLOG, TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.IN_REVIEW
@@ -70,7 +68,6 @@ async def get_dashboard(
 
     open_phase_statuses = [PhaseStatus.PLANNED, PhaseStatus.ACTIVE]
 
-    # Count queries — all scoped to workspace
     open_tasks_q = await db.execute(
         select(func.count()).where(
             Task.workspace_id == workspace_id,
@@ -108,7 +105,6 @@ async def get_dashboard(
         )
     )
 
-    # My tasks — assigned to current user
     my_tasks_q = await db.execute(
         select(Task)
         .where(
@@ -120,7 +116,6 @@ async def get_dashboard(
         .limit(10)
     )
 
-    # My issues — assigned to current user
     my_issues_q = await db.execute(
         select(Issue)
         .where(
