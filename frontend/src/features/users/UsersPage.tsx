@@ -1,11 +1,12 @@
 import { Users } from "lucide-react";
 import { useWorkspaceMembers } from "@/features/workspace/hooks";
+import type { WorkspaceMember } from "@/types";
 
 interface Props {
   workspaceId: string;
 }
 
-const ROLE_COLORS = {
+const ROLE_COLORS: Record<WorkspaceMember["role"], string> = {
   owner: "bg-purple-900 text-purple-300",
   admin: "bg-blue-900 text-blue-300",
   member: "bg-gray-700 text-gray-300",
@@ -39,7 +40,7 @@ export default function UsersPage({ workspaceId }: Props) {
               </tr>
             </thead>
             <tbody>
-              {members.map((m) => (
+              {members.map((m: WorkspaceMember) => (
                 <tr key={m.user.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
@@ -49,9 +50,7 @@ export default function UsersPage({ workspaceId }: Props) {
                       <span className="text-gray-100 font-medium">{m.user.full_name}</span>
                     </div>
                   </td>
-                  <td className="py-3 pr-4 text-gray-400">
-                    {"email" in m.user ? (m.user as { email: string }).email : "—"}
-                  </td>
+                  <td className="py-3 pr-4 text-gray-400">—</td>
                   <td className="py-3 pr-4">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${ROLE_COLORS[m.role]}`}>
                       {m.role}

@@ -16,7 +16,8 @@ export default function TimeLogsPage({ workspaceId }: Props) {
   const [form, setForm] = useState({ hours: "", description: "", logged_date: new Date().toISOString().split("T")[0] });
 
   const projectId = selectedProject || projects[0]?.id || "";
-  const { data: tasks = [] } = useTasks(workspaceId, projectId);
+  const { data: tasksData } = useTasks(workspaceId, projectId);
+  const tasks = tasksData?.items ?? [];
   const taskId = selectedTask || tasks[0]?.id || "";
 
   const { data: logs = [], isLoading } = useTimeLogs(workspaceId, projectId, taskId);

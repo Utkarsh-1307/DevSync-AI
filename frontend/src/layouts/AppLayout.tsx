@@ -3,9 +3,9 @@ import { Route, Routes, Link, useNavigate, useParams, useLocation, Navigate } fr
 import { AnimatePresence } from "framer-motion";
 import {
   Hash, Bell, Bot, Plus, LogOut, Lock, X, PlusCircle, MessageCircle,
-  Home, BarChart2, FolderKanban, Users, Share2, CheckSquare,
+  Home, BarChart2, Users, CheckSquare,
   AlertCircle, Layers, Clock, CalendarDays, UserPlus, ChevronDown, ChevronRight as ChevronRightIcon,
-  Contact,
+  Contact, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 import { Avatar } from "@/shared/components/ui/Avatar";
 import { useAuthStore } from "@/stores/authStore";
@@ -21,7 +21,6 @@ import { ProjectBoard } from "@/features/projects/ProjectBoard";
 import { NotificationsPage } from "@/features/notifications/NotificationsPage";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { useLogout } from "@/features/auth/hooks";
-import type { Channel } from "@/types";
 
 const HomePage = lazy(() => import("@/features/home/HomePage"));
 const ReportsPage = lazy(() => import("@/features/reports/ReportsPage"));
@@ -325,24 +324,29 @@ function NavItem({
   icon: Icon,
   label,
   badge,
+  collapsed = false,
 }: {
   to: string;
   icon: React.ElementType;
   label: string;
   badge?: number;
+  collapsed?: boolean;
 }) {
   const location = useLocation();
   const active = location.pathname === to || location.pathname.startsWith(to + "/");
   return (
     <Link
       to={to}
-      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors group ${
+      title={collapsed ? label : undefined}
+      className={`flex items-center gap-2.5 rounded-lg text-sm transition-colors group ${
+        collapsed ? "px-2 py-2 justify-center" : "px-3 py-2"
+      } ${
         active ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"
       }`}
     >
       <Icon className="h-4 w-4 flex-shrink-0" />
-      <span className="flex-1 truncate">{label}</span>
-      {badge !== undefined && badge > 0 && (
+      {!collapsed && <span className="flex-1 truncate">{label}</span>}
+      {!collapsed && badge !== undefined && badge > 0 && (
         <span className="bg-red-500 text-white text-xs font-semibold rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
           {badge > 99 ? "99+" : badge}
         </span>
@@ -351,10 +355,9 @@ function NavItem({
   );
 }
 
-function Sidebar({ workspaceId }: { workspaceId: string }) {
+function Sidebar({ workspaceId, collapsed, onToggle }: { workspaceId: string; collapsed: boolean; onToggle: () => void }) {
   const location = useLocation();
   const { data: channels = [] } = useChannels(workspaceId);
-  const { data: dms = [] } = useDMs(workspaceId);
   const { data: projects = [] } = useProjects(workspaceId);
   const user = useAuthStore((s) => s.user);
   const logout = useLogout();
@@ -367,14 +370,8 @@ function Sidebar({ workspaceId }: { workspaceId: string }) {
   const [overviewOpen, setOverviewOpen] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const { data: wsMembers = [] } = useWorkspaceMembers(workspaceId);
   const navigate = useNavigate();
   const workspace = useWorkspaceStore((s) => s.activeWorkspace);
-
-  function dmDisplayUser(ch: Channel) {
-    if (!user || !ch.members?.length) return null;
-    return ch.members.find((m) => m.id !== user.id) ?? ch.members[0];
-  }
 
   // Trial days remaining based on workspace created_at
   const trialDaysLeft = workspace?.created_at
@@ -383,29 +380,49 @@ function Sidebar({ workspaceId }: { workspaceId: string }) {
 
   return (
     <>
-      <aside className="w-64 flex-shrink-0 bg-gray-900 text-gray-200 flex flex-col h-full select-none">
-        <WorkspaceSwitcher workspaceId={workspaceId} />
+      <aside className={`${collapsed ? "w-14" : "w-64"} flex-shrink-0 bg-gray-900 text-gray-200 flex flex-col h-full select-none transition-all duration-200`}>
+
+        {/* Top: workspace name + collapse toggle */}
+        <div className={`flex items-center border-b border-gray-700 ${collapsed ? "justify-center py-3 px-2" : "px-2"}`}>
+          {!collapsed && <div className="flex-1"><WorkspaceSwitcher workspaceId={workspaceId} /></div>}
+          {collapsed && (
+            <div className="h-7 w-7 rounded bg-brand-600 flex items-center justify-center text-xs font-bold text-white">
+              {workspace?.name[0] ?? "W"}
+            </div>
+          )}
+          <button
+            type="button"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={onToggle}
+            className={`text-gray-500 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-gray-800 ${collapsed ? "mt-0" : "ml-1 mr-1"}`}
+          >
+            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          </button>
+        </div>
 
         <div className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
           {/* Top nav items */}
-          <NavItem to={`/w/${workspaceId}/home`} icon={Home} label="Home" />
-          <NavItem to={`/w/${workspaceId}/notifications`} icon={Bell} label="Notifications" badge={unreadCount} />
-          <NavItem to={`/w/${workspaceId}/reports`} icon={BarChart2} label="Reports" />
+          <NavItem to={`/w/${workspaceId}/home`} icon={Home} label="Home" collapsed={collapsed} />
+          <NavItem to={`/w/${workspaceId}/notifications`} icon={Bell} label="Notifications" badge={unreadCount} collapsed={collapsed} />
+          <NavItem to={`/w/${workspaceId}/reports`} icon={BarChart2} label="Reports" collapsed={collapsed} />
 
           {/* Projects section */}
           <div className="pt-2">
-            <div className="flex items-center justify-between px-3 mb-1">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Projects</span>
-              <button
-                type="button"
-                onClick={() => setShowCreateProject(true)}
-                className="text-gray-500 hover:text-gray-200 transition-colors"
-                aria-label="Create project"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            {projects.length === 0 && (
+            {!collapsed && (
+              <div className="flex items-center justify-between px-3 mb-1">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Projects</span>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateProject(true)}
+                  className="text-gray-500 hover:text-gray-200 transition-colors"
+                  aria-label="Create project"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+            {!collapsed && projects.length === 0 && (
               <p className="text-xs text-gray-600 px-3 py-1">No projects yet</p>
             )}
             {projects.map((p) => {
@@ -415,32 +432,35 @@ function Sidebar({ workspaceId }: { workspaceId: string }) {
                 <Link
                   key={p.id}
                   to={path}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
-                    active ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"
-                  }`}
+                  title={collapsed ? p.name : undefined}
+                  className={`flex items-center rounded-lg text-sm transition-colors ${
+                    collapsed ? "justify-center px-2 py-2" : "gap-2.5 px-3 py-2"
+                  } ${active ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
                 >
                   <span className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
-                  <span className="truncate">{p.name}</span>
+                  {!collapsed && <span className="truncate">{p.name}</span>}
                 </Link>
               );
             })}
           </div>
 
-          <NavItem to={`/w/${workspaceId}/users`} icon={Users} label="Users" />
+          <NavItem to={`/w/${workspaceId}/users`} icon={Users} label="Users" collapsed={collapsed} />
 
           {/* Collaboration (channels + DMs) */}
           <div className="pt-2">
-            <div className="flex items-center justify-between px-3 mb-1">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Collaboration</span>
-              <button
-                type="button"
-                onClick={() => setShowCreateChannel(true)}
-                className="text-gray-500 hover:text-gray-200 transition-colors"
-                aria-label="Create channel"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
+            {!collapsed && (
+              <div className="flex items-center justify-between px-3 mb-1">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Collaboration</span>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateChannel(true)}
+                  className="text-gray-500 hover:text-gray-200 transition-colors"
+                  aria-label="Create channel"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
             {channels.map((ch) => {
               const Icon = ch.channel_type === "private" ? Lock : Hash;
               const path = `/w/${workspaceId}/c/${ch.id}`;
@@ -449,87 +469,107 @@ function Sidebar({ workspaceId }: { workspaceId: string }) {
                 <Link
                   key={ch.id}
                   to={path}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
-                    active ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"
-                  }`}
+                  title={collapsed ? ch.name : undefined}
+                  className={`flex items-center rounded-lg text-sm transition-colors ${
+                    collapsed ? "justify-center px-2 py-2" : "gap-2.5 px-3 py-2"
+                  } ${active ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
                 >
                   <Icon className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">{ch.name}</span>
+                  {!collapsed && <span className="truncate">{ch.name}</span>}
                 </Link>
               );
             })}
-            {channels.length === 0 && <p className="text-xs text-gray-600 px-3 py-1">No channels yet</p>}
+            {!collapsed && channels.length === 0 && <p className="text-xs text-gray-600 px-3 py-1">No channels yet</p>}
           </div>
 
-          <NavItem to={`/w/${workspaceId}/approvals`} icon={CheckSquare} label="My Approvals" />
+          <NavItem to={`/w/${workspaceId}/approvals`} icon={CheckSquare} label="My Approvals" collapsed={collapsed} />
 
           {/* Overview collapsible */}
           <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => setOverviewOpen((o) => !o)}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
-            >
-              <span className="font-semibold text-xs uppercase tracking-wider text-gray-500">Overview</span>
-              {overviewOpen ? (
-                <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
-              ) : (
-                <ChevronRightIcon className="h-3.5 w-3.5 text-gray-500" />
-              )}
-            </button>
-            {overviewOpen && (
-              <div className="ml-2 space-y-0.5 mt-0.5">
-                <NavItem to={`/w/${workspaceId}/tasks`} icon={CheckSquare} label="Tasks" />
-                <NavItem to={`/w/${workspaceId}/issues`} icon={AlertCircle} label="Issues" />
-                <NavItem to={`/w/${workspaceId}/phases`} icon={Layers} label="Phases" />
-                <NavItem to={`/w/${workspaceId}/time-logs`} icon={Clock} label="Time Logs" />
-                <NavItem to={`/w/${workspaceId}/timesheets`} icon={CalendarDays} label="Timesheets" />
+            {!collapsed && (
+              <button
+                type="button"
+                onClick={() => setOverviewOpen((o) => !o)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <span className="font-semibold text-xs uppercase tracking-wider text-gray-500">Overview</span>
+                {overviewOpen ? (
+                  <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
+                ) : (
+                  <ChevronRightIcon className="h-3.5 w-3.5 text-gray-500" />
+                )}
+              </button>
+            )}
+            {(overviewOpen || collapsed) && (
+              <div className={`space-y-0.5 mt-0.5 ${!collapsed && "ml-2"}`}>
+                <NavItem to={`/w/${workspaceId}/tasks`} icon={CheckSquare} label="Tasks" collapsed={collapsed} />
+                <NavItem to={`/w/${workspaceId}/issues`} icon={AlertCircle} label="Issues" collapsed={collapsed} />
+                <NavItem to={`/w/${workspaceId}/phases`} icon={Layers} label="Phases" collapsed={collapsed} />
+                <NavItem to={`/w/${workspaceId}/time-logs`} icon={Clock} label="Time Logs" collapsed={collapsed} />
+                <NavItem to={`/w/${workspaceId}/timesheets`} icon={CalendarDays} label="Timesheets" collapsed={collapsed} />
               </div>
             )}
           </div>
         </div>
 
         {/* Invite + Trial badge */}
-        <div className="px-2 py-2 border-t border-gray-800 space-y-2">
-          <button
-            type="button"
-            onClick={() => setShowInvite(true)}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
-          >
-            <UserPlus className="h-4 w-4 text-brand-400" />
-            <span>Invite Users</span>
-            {trialDaysLeft > 0 && (
-              <span className="ml-auto text-xs font-medium px-1.5 py-0.5 rounded-full bg-yellow-900 text-yellow-300">
-                {trialDaysLeft}d left
-              </span>
-            )}
-          </button>
-        </div>
+        {!collapsed && (
+          <div className="px-2 py-2 border-t border-gray-800">
+            <button
+              type="button"
+              onClick={() => setShowInvite(true)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+            >
+              <UserPlus className="h-4 w-4 text-brand-400" />
+              <span>Invite Users</span>
+              {trialDaysLeft > 0 && (
+                <span className="ml-auto text-xs font-medium px-1.5 py-0.5 rounded-full bg-yellow-900 text-yellow-300">
+                  {trialDaysLeft}d left
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+        {collapsed && (
+          <div className="px-2 py-2 border-t border-gray-800 flex justify-center">
+            <button
+              type="button"
+              title="Invite Users"
+              aria-label="Invite Users"
+              onClick={() => setShowInvite(true)}
+              className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-gray-800 transition-colors"
+            >
+              <UserPlus className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Chats / Contacts bottom bar */}
-        <div className="flex items-stretch border-t border-gray-800">
+        <div className={`flex items-stretch border-t border-gray-800 ${collapsed ? "flex-col" : ""}`}>
           <button
             type="button"
+            title="Chats"
             onClick={() => setShowNewDM(true)}
-            className="flex-1 flex flex-col items-center gap-1 py-3 text-gray-500 hover:text-white hover:bg-gray-800 transition-colors text-xs"
+            className={`flex-1 flex items-center gap-1 text-gray-500 hover:text-white hover:bg-gray-800 transition-colors text-xs py-3 ${collapsed ? "flex-col justify-center px-0" : "flex-col justify-center"}`}
           >
             <MessageCircle className="h-4 w-4" />
-            Chats
+            {!collapsed && "Chats"}
           </button>
-          <div className="w-px bg-gray-800" />
+          <div className={collapsed ? "h-px bg-gray-800 mx-2" : "w-px bg-gray-800"} />
           <button
             type="button"
+            title="Contacts"
             onClick={() => navigate(`/w/${workspaceId}/users`)}
-            className="flex-1 flex flex-col items-center gap-1 py-3 text-gray-500 hover:text-white hover:bg-gray-800 transition-colors text-xs"
+            className={`flex-1 flex items-center gap-1 text-gray-500 hover:text-white hover:bg-gray-800 transition-colors text-xs py-3 ${collapsed ? "flex-col justify-center px-0" : "flex-col justify-center"}`}
           >
             <Contact className="h-4 w-4" />
-            Contacts
+            {!collapsed && "Contacts"}
           </button>
         </div>
 
         {/* User profile strip */}
         {user && (
-          <div className="p-3 border-t border-gray-800 flex items-center gap-2">
+          <div className={`border-t border-gray-800 flex items-center ${collapsed ? "justify-center p-2 gap-0" : "p-3 gap-2"}`}>
             <button
               type="button"
               onClick={() => setShowProfile(true)}
@@ -538,18 +578,22 @@ function Sidebar({ workspaceId }: { workspaceId: string }) {
             >
               <Avatar user={user} size="sm" />
             </button>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-gray-200 truncate">{user.full_name}</p>
-              <p className="text-xs text-gray-400 truncate">{user.email}</p>
-            </div>
-            <button
-              type="button"
-              onClick={logout}
-              className="text-gray-400 hover:text-red-400 transition-colors"
-              aria-label="Log out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            {!collapsed && (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-200 truncate">{user.full_name}</p>
+                  <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="text-gray-400 hover:text-red-400 transition-colors"
+                  aria-label="Log out"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </>
+            )}
           </div>
         )}
       </aside>
@@ -636,7 +680,7 @@ function WorkspaceContent({ workspaceId }: { workspaceId: string }) {
         <Route path="c/:channelId" element={<ChannelRouteView workspaceId={workspaceId} />} />
         <Route path="projects/:projectId" element={<ProjectRouteView workspaceId={workspaceId} />} />
         <Route path="notifications" element={<NotificationsPage workspaceId={workspaceId} />} />
-        <Route path="home" element={<HomePage />} />
+        <Route path="home" element={<HomePage workspaceId={workspaceId} />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="approvals" element={<ApprovalsPage />} />
         <Route path="users" element={<UsersPage workspaceId={workspaceId} />} />
@@ -652,7 +696,17 @@ function WorkspaceContent({ workspaceId }: { workspaceId: string }) {
 
 export function AppLayout() {
   const [aiOpen, setAIOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem("sidebar_collapsed") === "true"
+  );
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
+
+  function toggleSidebar() {
+    setSidebarCollapsed((prev) => {
+      localStorage.setItem("sidebar_collapsed", String(!prev));
+      return !prev;
+    });
+  }
   const { data: workspaces } = useWorkspaces();
   const { setActiveWorkspace } = useWorkspaceStore();
   const navigate = useNavigate();
@@ -677,7 +731,7 @@ export function AppLayout() {
 
   return (
     <div className="flex h-full">
-      <Sidebar workspaceId={activeWorkspace.id} />
+      <Sidebar workspaceId={activeWorkspace.id} collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
       <main className="flex-1 min-w-0 flex flex-col bg-white dark:bg-gray-900">
         <header className="h-12 flex-shrink-0 flex items-center px-4 border-b border-gray-200 dark:border-gray-700">
           <SearchBar workspaceId={activeWorkspace.id} />

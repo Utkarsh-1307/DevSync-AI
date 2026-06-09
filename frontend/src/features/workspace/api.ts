@@ -16,5 +16,5 @@ export const workspaceApi = {
     api.post(`/workspaces/${id}/members`, { email, role }).then((r) => r.data),
 
   getMembers: (id: string) =>
-    api.get(`/workspaces/${id}/members`).then((r) => r.data),
+    api.get<import("@/types").WorkspaceMember[]>(`/workspaces/${id}/members`).then((r) => r.data),
 };

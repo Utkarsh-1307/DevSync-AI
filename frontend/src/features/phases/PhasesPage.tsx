@@ -27,7 +27,7 @@ export default function PhasesPage({ workspaceId }: Props) {
 
   const handleCreate = () => {
     if (!form.name.trim() || !projectId) return;
-    const payload: Record<string, string> = { name: form.name };
+    const payload: { name: string; start_date?: string; end_date?: string } = { name: form.name };
     if (form.start_date) payload.start_date = form.start_date;
     if (form.end_date) payload.end_date = form.end_date;
     createPhase.mutate(payload, {
@@ -44,6 +44,7 @@ export default function PhasesPage({ workspaceId }: Props) {
           <h1 className="text-lg font-semibold">Phases</h1>
         </div>
         <button
+          type="button"
           onClick={() => setShowForm(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition-colors"
         >
@@ -55,6 +56,7 @@ export default function PhasesPage({ workspaceId }: Props) {
       {/* Project selector */}
       <div className="px-6 py-3 border-b border-gray-800">
         <select
+          title="Select project"
           value={selectedProject}
           onChange={(e) => setSelectedProject(e.target.value)}
           className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-brand-500"
@@ -68,7 +70,7 @@ export default function PhasesPage({ workspaceId }: Props) {
         <div className="mx-6 mt-4 p-4 bg-gray-800 rounded-xl border border-gray-700">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium">New Phase</span>
-            <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-white">
+            <button type="button" aria-label="Close" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-white">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -77,12 +79,14 @@ export default function PhasesPage({ workspaceId }: Props) {
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             placeholder="Phase name..."
+            title="Phase name"
             className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-brand-500 mb-3"
           />
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Start Date</label>
+              <label htmlFor="phase-start-date" className="text-xs text-gray-400 mb-1 block">Start Date</label>
               <input
+                id="phase-start-date"
                 type="date"
                 value={form.start_date}
                 onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))}
@@ -90,8 +94,9 @@ export default function PhasesPage({ workspaceId }: Props) {
               />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">End Date</label>
+              <label htmlFor="phase-end-date" className="text-xs text-gray-400 mb-1 block">End Date</label>
               <input
+                id="phase-end-date"
                 type="date"
                 value={form.end_date}
                 onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
@@ -100,6 +105,7 @@ export default function PhasesPage({ workspaceId }: Props) {
             </div>
           </div>
           <button
+            type="button"
             onClick={handleCreate}
             disabled={createPhase.isPending}
             className="px-4 py-1.5 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
@@ -149,6 +155,8 @@ export default function PhasesPage({ workspaceId }: Props) {
                     {phase.status}
                   </span>
                   <button
+                    type="button"
+                    aria-label="Delete phase"
                     onClick={() => deletePhase.mutate(phase.id)}
                     className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-all"
                   >
