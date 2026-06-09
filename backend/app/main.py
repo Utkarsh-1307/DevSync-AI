@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api.v1 import auth, workspaces, projects, tasks, channels, notifications, ai, upload, search, oauth, issues, phases, time_logs, dashboard
+from app.api.v1 import auth, workspaces, projects, tasks, channels, notifications, ai, upload, search, oauth, issues, phases, time_logs, dashboard, audit
 from app.core.config import settings
 from app.core.exceptions import (
     AppError,
@@ -65,6 +65,9 @@ def create_app() -> FastAPI:
     from app.middleware.rate_limit import RateLimitMiddleware
     app.add_middleware(RateLimitMiddleware)
 
+    from app.middleware.request_id import RequestIDMiddleware
+    app.add_middleware(RequestIDMiddleware)
+
     app.add_exception_handler(AppError, app_error_handler)
     from fastapi import HTTPException
     app.add_exception_handler(HTTPException, http_exception_handler)
@@ -86,6 +89,7 @@ def create_app() -> FastAPI:
     app.include_router(phases.router, prefix=prefix)
     app.include_router(time_logs.router, prefix=prefix)
     app.include_router(dashboard.router, prefix=prefix)
+    app.include_router(audit.router, prefix=prefix)
 
     # Serve uploaded files as static assets
     upload_dir = Path("/app/uploads")

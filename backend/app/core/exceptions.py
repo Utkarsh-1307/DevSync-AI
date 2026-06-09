@@ -61,18 +61,27 @@ class RateLimitError(AppError):
     message = "Too many requests"
 
 
+def _request_id() -> str | None:
+    import structlog
+    return structlog.contextvars.get_contextvars().get("request_id")
+
+
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     body: dict = {"error": exc.code, "message": exc.message}
     if exc.detail:
         body["detail"] = exc.detail
+    rid = _request_id()
+    if rid:
+        body["request_id"] = rid
     return JSONResponse(status_code=exc.status_code, content=body)
 
 
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"error": "http_error", "message": exc.detail},
-    )
+    body: dict = {"error": "http_error", "message": exc.detail}
+    rid = _request_id()
+    if rid:
+        body["request_id"] = rid
+    return JSONResponse(status_code=exc.status_code, content=body)
 
 
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -80,7 +89,8 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
     logger = get_logger(__name__)
     logger.exception("Unhandled exception", path=request.url.path, method=request.method)
-    return JSONResponse(
-        status_code=500,
-        content={"error": "internal_error", "message": "An unexpected error occurred"},
-    )
+    body: dict = {"error": "internal_error", "message": "An unexpected error occurred"}
+    rid = _request_id()
+    if rid:
+        body["request_id"] = rid
+    return JSONResponse(status_code=500, content=body)

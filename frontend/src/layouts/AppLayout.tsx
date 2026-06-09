@@ -5,7 +5,7 @@ import {
   Hash, Bell, Bot, Plus, LogOut, Lock, X, PlusCircle, MessageCircle,
   Home, BarChart2, Users, CheckSquare,
   AlertCircle, Layers, Clock, CalendarDays, UserPlus, ChevronDown, ChevronRight as ChevronRightIcon,
-  Contact, PanelLeftClose, PanelLeftOpen, Trash2,
+  Contact, PanelLeftClose, PanelLeftOpen, Trash2, Shield,
 } from "lucide-react";
 import { Avatar } from "@/shared/components/ui/Avatar";
 import { useAuthStore } from "@/stores/authStore";
@@ -23,7 +23,7 @@ import { useUnreadCount } from "@/features/notifications/hooks";
 import { useLogout } from "@/features/auth/hooks";
 
 const HomePage = lazy(() => import("@/features/home/HomePage"));
-const WorkspaceTasksPage = lazy(() => import("@/features/tasks/WorkspaceTasksPage"));
+import WorkspaceTasksPage from "@/features/tasks/WorkspaceTasksPage";
 const ReportsPage = lazy(() => import("@/features/reports/ReportsPage"));
 const ApprovalsPage = lazy(() => import("@/features/approvals/ApprovalsPage"));
 const UsersPage = lazy(() => import("@/features/users/UsersPage"));
@@ -31,6 +31,7 @@ const IssuesPage = lazy(() => import("@/features/issues/IssuesPage"));
 const PhasesPage = lazy(() => import("@/features/phases/PhasesPage"));
 const TimeLogsPage = lazy(() => import("@/features/time-logs/TimeLogsPage"));
 const TimesheetsPage = lazy(() => import("@/features/timesheets/TimesheetsPage"));
+const AuditLogsPage = lazy(() => import("@/features/audit/AuditLogsPage"));
 
 function CreateChannelModal({ workspaceId, onClose }: { workspaceId: string; onClose: () => void }) {
   const [name, setName] = useState("");
@@ -532,6 +533,7 @@ function Sidebar({ workspaceId, collapsed, onToggle }: { workspaceId: string; co
                 <NavItem to={`/w/${workspaceId}/phases`} icon={Layers} label="Phases" collapsed={collapsed} />
                 <NavItem to={`/w/${workspaceId}/time-logs`} icon={Clock} label="Time Logs" collapsed={collapsed} />
                 <NavItem to={`/w/${workspaceId}/timesheets`} icon={CalendarDays} label="Timesheets" collapsed={collapsed} />
+                <NavItem to={`/w/${workspaceId}/audit-logs`} icon={Shield} label="Audit Logs" collapsed={collapsed} />
               </div>
             )}
           </div>
@@ -743,6 +745,7 @@ function WorkspaceContent({ workspaceId }: { workspaceId: string }) {
         <Route path="time-logs" element={<TimeLogsPage workspaceId={workspaceId} />} />
         <Route path="timesheets" element={<TimesheetsPage workspaceId={workspaceId} />} />
         <Route path="tasks" element={<WorkspaceTasksPage workspaceId={workspaceId} />} />
+        <Route path="audit-logs" element={<AuditLogsPage workspaceId={workspaceId} />} />
       </Routes>
     </Suspense>
   );

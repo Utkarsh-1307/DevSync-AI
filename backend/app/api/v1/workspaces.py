@@ -1,20 +1,27 @@
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from app.api.deps import CurrentUser, DB, Pagination, WorkspaceAdmin, WorkspaceMember
 from app.schemas.common import MessageResponse, PaginatedResponse
 from app.schemas.user import WorkspaceMemberResponse
 from app.schemas.workspace import InviteMemberRequest, WorkspaceCreate, WorkspaceResponse, WorkspaceUpdate
+from app.services.audit_service import AuditService
 from app.services.workspace_service import WorkspaceService
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
 
 @router.post("", response_model=WorkspaceResponse, status_code=201)
-async def create_workspace(data: WorkspaceCreate, current_user: CurrentUser, db: DB) -> WorkspaceResponse:
+async def create_workspace(data: WorkspaceCreate, request: Request, current_user: CurrentUser, db: DB) -> WorkspaceResponse:
     service = WorkspaceService(db)
     workspace = await service.create_workspace(data, current_user.id)
+    await AuditService.log(
+        db, action="workspace.created", request=request,
+        user_id=current_user.id, workspace_id=workspace.id,
+        entity_type="workspace", entity_id=workspace.id,
+        new_value={"name": workspace.name},
+    )
     return WorkspaceResponse.model_validate(workspace)
 
 
@@ -72,12 +79,18 @@ async def invite_member(
 @router.delete("/{workspace_id}", response_model=MessageResponse)
 async def delete_workspace(
     workspace_id: UUID,
+    request: Request,
     current_user: CurrentUser,
     db: DB,
     _: WorkspaceAdmin,
 ) -> MessageResponse:
     service = WorkspaceService(db)
     await service.delete_workspace(workspace_id, current_user.id)
+    await AuditService.log(
+        db, action="workspace.deleted", request=request,
+        user_id=current_user.id, workspace_id=workspace_id,
+        entity_type="workspace", entity_id=workspace_id,
+    )
     return MessageResponse(message="Workspace deleted")
 
 

@@ -9,6 +9,7 @@ from app.models.channel import Channel, ChannelMembership
 from app.models.message import Message, MessageReaction
 from app.models.notification import Notification
 from app.models.rbac import Role, Permission, RolePermission
+from app.models.audit_log import AuditLog
 
 __all__ = [
     "User",
@@ -35,4 +36,5 @@ __all__ = [
     "Role",
     "Permission",
     "RolePermission",
+    "AuditLog",
 ]
