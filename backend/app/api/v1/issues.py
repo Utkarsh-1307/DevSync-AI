@@ -1,14 +1,13 @@
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel as PydanticBase
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import get_current_user, get_db, require_workspace_member
-from app.models import Issue, IssueLabel, IssueStatus, IssuePriority
+from app.api.deps import CurrentUser, DB, WorkspaceMember
+from app.models import Issue, IssueStatus, IssuePriority
 from app.models.user import User
 
 router = APIRouter(tags=["issues"])
@@ -78,7 +77,7 @@ async def _get_issue_or_404(
     issue_id: uuid.UUID,
     project_id: uuid.UUID,
     workspace_id: uuid.UUID,
-    db: AsyncSession,
+    db,
 ) -> Issue:
     result = await db.execute(
         select(Issue)
@@ -102,9 +101,9 @@ async def create_issue(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     body: IssueCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    _: None = Depends(require_workspace_member),
+    current_user: CurrentUser,
+    db: DB,
+    _: WorkspaceMember,
 ):
     issue = Issue(
         workspace_id=workspace_id,
@@ -128,12 +127,11 @@ async def create_issue(
 async def list_issues(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
+    db: DB,
+    _: WorkspaceMember,
     status_filter: Optional[IssueStatus] = Query(None, alias="status"),
     priority_filter: Optional[IssuePriority] = Query(None, alias="priority"),
     assignee_id: Optional[uuid.UUID] = Query(None),
-    db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
-    __: None = Depends(require_workspace_member),
 ):
     q = select(Issue).where(Issue.workspace_id == workspace_id, Issue.project_id == project_id)
     if status_filter:
@@ -155,9 +153,8 @@ async def get_issue(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     issue_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
-    __: None = Depends(require_workspace_member),
+    db: DB,
+    _: WorkspaceMember,
 ):
     return await _get_issue_or_404(issue_id, project_id, workspace_id, db)
 
@@ -171,9 +168,8 @@ async def update_issue(
     project_id: uuid.UUID,
     issue_id: uuid.UUID,
     body: IssueUpdate,
-    db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
-    __: None = Depends(require_workspace_member),
+    db: DB,
+    _: WorkspaceMember,
 ):
     issue = await _get_issue_or_404(issue_id, project_id, workspace_id, db)
     for field, val in body.model_dump(exclude_none=True).items():
@@ -190,9 +186,8 @@ async def delete_issue(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     issue_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
-    __: None = Depends(require_workspace_member),
+    db: DB,
+    _: WorkspaceMember,
 ):
     issue = await _get_issue_or_404(issue_id, project_id, workspace_id, db)
     await db.delete(issue)

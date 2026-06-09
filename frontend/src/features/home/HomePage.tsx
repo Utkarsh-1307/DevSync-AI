@@ -1,11 +1,13 @@
 import { Plus, MoreHorizontal, ChevronDown, ClipboardList, AlertCircle, Circle, Clock, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
 import { useDashboard } from "./hooks";
+import { HomeChatPanel } from "./HomeChatPanel";
 import type { DashboardTaskSummary, DashboardIssueSummary } from "./api";
 import type { TaskStatus, TaskPriority, IssueStatus, IssuePriority } from "@/types";
 
 interface Props {
   workspaceId: string;
 }
+
 
 // ---- colour maps ----
 const ISSUE_STATUS_COLOR: Record<IssueStatus, string> = {
@@ -227,6 +229,17 @@ export default function HomePage({ workspaceId }: Props) {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* General Chat widget */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl flex flex-col h-[420px]">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800 shrink-0">
+            <span className="text-sm font-semibold text-gray-200"># general</span>
+            <span className="text-xs text-gray-500 ml-1">· Workspace chat</span>
+          </div>
+          <div className="flex-1 min-h-0">
+            <HomeChatPanel workspaceId={workspaceId} />
           </div>
         </div>
       </div>

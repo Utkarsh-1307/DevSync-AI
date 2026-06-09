@@ -17,4 +17,7 @@ export const workspaceApi = {
 
   getMembers: (id: string) =>
     api.get<import("@/types").WorkspaceMember[]>(`/workspaces/${id}/members`).then((r) => r.data),
+
+  delete: (id: string) =>
+    api.delete(`/workspaces/${id}`).then((r) => r.data),
 };

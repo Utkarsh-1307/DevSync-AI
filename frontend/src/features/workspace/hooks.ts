@@ -33,6 +33,18 @@ export function useCreateWorkspace() {
   });
 }
 
+export function useDeleteWorkspace() {
+  const qc = useQueryClient();
+  const { clearWorkspace } = useWorkspaceStore();
+  return useMutation({
+    mutationFn: workspaceApi.delete,
+    onSuccess: () => {
+      clearWorkspace();
+      qc.invalidateQueries({ queryKey: workspaceKeys.all });
+    },
+  });
+}
+
 export function useWorkspaceMembers(workspaceId: string) {
   return useQuery({
     queryKey: workspaceKeys.members(workspaceId),

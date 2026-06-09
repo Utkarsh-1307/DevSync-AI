@@ -5,12 +5,12 @@ import {
   Hash, Bell, Bot, Plus, LogOut, Lock, X, PlusCircle, MessageCircle,
   Home, BarChart2, Users, CheckSquare,
   AlertCircle, Layers, Clock, CalendarDays, UserPlus, ChevronDown, ChevronRight as ChevronRightIcon,
-  Contact, PanelLeftClose, PanelLeftOpen,
+  Contact, PanelLeftClose, PanelLeftOpen, Trash2,
 } from "lucide-react";
 import { Avatar } from "@/shared/components/ui/Avatar";
 import { useAuthStore } from "@/stores/authStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
-import { useWorkspaces } from "@/features/workspace/hooks";
+import { useWorkspaces, useDeleteWorkspace } from "@/features/workspace/hooks";
 import { useChannels, useCreateChannel, useDMs, useCreateDM, useWorkspaceMembers } from "@/features/channels/hooks";
 import { useProjects, useCreateProject } from "@/features/projects/hooks";
 import { AIChatPanel } from "@/features/ai/AIChatPanel";
@@ -259,12 +259,20 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
   const workspace = useWorkspaceStore((s) => s.activeWorkspace);
   const { setActiveWorkspace } = useWorkspaceStore();
   const { data: allWorkspaces = [] } = useWorkspaces();
+  const deleteWorkspace = useDeleteWorkspace();
   const [open, setOpen] = useState(false);
 
   function switchTo(ws: (typeof allWorkspaces)[0]) {
     setActiveWorkspace(ws);
     navigate(`/w/${ws.id}`);
     setOpen(false);
+  }
+
+  async function handleDelete(ws: (typeof allWorkspaces)[0]) {
+    if (!confirm(`Delete workspace "${ws.name}"? This cannot be undone.`)) return;
+    setOpen(false);
+    await deleteWorkspace.mutateAsync(ws.id);
+    navigate("/onboarding");
   }
 
   return (
@@ -287,20 +295,28 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
           <div className="absolute left-0 top-full w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 py-1 mt-0.5">
             <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Workspaces</p>
             {allWorkspaces.map((ws) => (
-              <button
-                key={ws.id}
-                type="button"
-                onClick={() => switchTo(ws)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                  ws.id === workspaceId ? "text-white" : "text-gray-300"
-                }`}
-              >
-                <div className="h-6 w-6 rounded bg-brand-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-                  {ws.name[0]}
-                </div>
-                <span className="truncate">{ws.name}</span>
-                {ws.id === workspaceId && <span className="ml-auto text-brand-400 text-xs">●</span>}
-              </button>
+              <div key={ws.id} className="flex items-center group">
+                <button
+                  type="button"
+                  onClick={() => switchTo(ws)}
+                  className={`flex-1 flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${ws.id === workspaceId ? "text-white" : "text-gray-300"}`}
+                >
+                  <div className="h-6 w-6 rounded bg-brand-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                    {ws.name[0]}
+                  </div>
+                  <span className="truncate">{ws.name}</span>
+                  {ws.id === workspaceId && <span className="ml-auto text-brand-400 text-xs">●</span>}
+                </button>
+                <button
+                  type="button"
+                  title="Delete workspace"
+                  aria-label="Delete workspace"
+                  onClick={() => handleDelete(ws)}
+                  className="opacity-0 group-hover:opacity-100 px-2 py-2 text-gray-500 hover:text-red-400 transition-all"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))}
             <div className="border-t border-gray-700 mt-1 pt-1">
               <Link

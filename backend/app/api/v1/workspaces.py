@@ -69,6 +69,18 @@ async def invite_member(
     return MessageResponse(message="Member invited successfully")
 
 
+@router.delete("/{workspace_id}", response_model=MessageResponse)
+async def delete_workspace(
+    workspace_id: UUID,
+    current_user: CurrentUser,
+    db: DB,
+    _: WorkspaceAdmin,
+) -> MessageResponse:
+    service = WorkspaceService(db)
+    await service.delete_workspace(workspace_id, current_user.id)
+    return MessageResponse(message="Workspace deleted")
+
+
 @router.delete("/{workspace_id}/members/{member_id}", response_model=MessageResponse)
 async def remove_member(
     workspace_id: UUID,

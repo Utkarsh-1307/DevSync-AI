@@ -105,6 +105,14 @@ class WorkspaceService:
         await self._db.delete(membership)
         await self._db.flush()
 
+    async def delete_workspace(self, workspace_id: UUID, requester_id: UUID) -> None:
+        await self._require_role(workspace_id, requester_id, [WorkspaceRole.OWNER])
+        workspace = await self._ws_repo.get_by_id_with_owner(workspace_id)
+        if not workspace:
+            raise NotFoundError("Workspace not found")
+        workspace.is_active = False
+        await self._db.flush()
+
     async def _require_role(
         self, workspace_id: UUID, user_id: UUID, allowed_roles: list[WorkspaceRole]
     ) -> UserWorkspaceMembership:
