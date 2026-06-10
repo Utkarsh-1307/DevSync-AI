@@ -44,8 +44,10 @@ Thumbs.db
 # Docker
 .docker/
 
-# SSL certs (never commit)
-nginx/ssl/
+# SSL certs (never commit real keys)
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
 
 # Internal learning docs (not for public repo)
 docs/
