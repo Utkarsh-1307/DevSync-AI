@@ -1,15 +1,17 @@
+import datetime
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DB, WorkspaceMember
+from app.core.config import settings
+from app.db.redis import get_redis_client
 from app.models.channel import Channel
 from app.models.project import Project
 from app.models.task import Task
 from app.services.ai_service import AIService
-from app.repositories.workspace_repo import WorkspaceRepository
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/ai", tags=["ai"])
 
@@ -41,8 +43,30 @@ class AITextResponse(BaseModel):
     result: str
 
 
+async def check_ai_rate_limit(current_user: CurrentUser) -> None:
+    today = datetime.date.today().isoformat()
+    key = f"ai_limit:{current_user.id}:{today}"
+    try:
+        redis = get_redis_client()
+        count = await redis.incr(key)
+        if count == 1:
+            await redis.expire(key, 86400)
+        await redis.aclose()
+        if count > settings.AI_DAILY_LIMIT:
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    f"AI request limit reached ({settings.AI_DAILY_LIMIT}/day). "
+                    "Resets at midnight UTC."
+                ),
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # never block the user if Redis is unavailable
+
+
 async def _get_workspace_data(workspace_id: UUID, db) -> dict:
-    """Fetch tasks, projects, and channels for the given workspace."""
     projects_result = await db.execute(
         select(Project).where(Project.workspace_id == workspace_id)
     )
@@ -78,7 +102,11 @@ async def _get_workspace_data(workspace_id: UUID, db) -> dict:
 
 @router.post("/summarize-task", response_model=AITextResponse)
 async def summarize_task(
-    workspace_id: UUID, data: TaskSummarizeRequest, current_user: CurrentUser, _: WorkspaceMember
+    workspace_id: UUID,
+    data: TaskSummarizeRequest,
+    current_user: CurrentUser,
+    _: WorkspaceMember,
+    __: None = Depends(check_ai_rate_limit),
 ) -> AITextResponse:
     service = AIService()
     result = await service.summarize_task(data.title, data.description, data.comments)
@@ -91,6 +119,7 @@ async def suggest_description(
     data: SuggestDescriptionRequest,
     current_user: CurrentUser,
     _: WorkspaceMember,
+    __: None = Depends(check_ai_rate_limit),
 ) -> AITextResponse:
     service = AIService()
     result = await service.suggest_task_description(data.title, data.project_name)
@@ -99,7 +128,11 @@ async def suggest_description(
 
 @router.post("/standup", response_model=AITextResponse)
 async def generate_standup(
-    workspace_id: UUID, data: StandupRequest, current_user: CurrentUser, _: WorkspaceMember
+    workspace_id: UUID,
+    data: StandupRequest,
+    current_user: CurrentUser,
+    _: WorkspaceMember,
+    __: None = Depends(check_ai_rate_limit),
 ) -> AITextResponse:
     service = AIService()
     result = await service.generate_standup(data.tasks, data.yesterday_tasks, data.blockers)
@@ -113,6 +146,7 @@ async def chat(
     current_user: CurrentUser,
     _: WorkspaceMember,
     db: DB,
+    __: None = Depends(check_ai_rate_limit),
 ) -> AITextResponse:
     workspace_data = await _get_workspace_data(workspace_id, db)
     service = AIService()

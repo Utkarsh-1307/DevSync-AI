@@ -74,6 +74,7 @@ class Settings(BaseSettings):
     # Rate limiting
     RATE_LIMIT_REQUESTS: int = 100
     RATE_LIMIT_WINDOW_SECONDS: int = 60
+    AI_DAILY_LIMIT: int = 50  # max AI requests per user per calendar day
 
     # Pagination
     DEFAULT_PAGE_SIZE: int = 25
