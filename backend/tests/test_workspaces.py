@@ -42,3 +42,51 @@ async def test_get_workspace_not_member(client: AsyncClient, auth_headers: dict)
 
     response = await client.get(f"/api/v1/workspaces/{uuid.uuid4()}", headers=auth_headers)
     assert response.status_code in (403, 404)
+
+
+@pytest.mark.asyncio
+async def test_get_workspace_member(client: AsyncClient, auth_headers: dict) -> None:
+    create = await client.post(
+        "/api/v1/workspaces",
+        json={"name": "Get WS", "slug": "get-ws"},
+        headers=auth_headers,
+    )
+    workspace_id = create.json()["id"]
+    resp = await client.get(f"/api/v1/workspaces/{workspace_id}", headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json()["id"] == workspace_id
+
+
+@pytest.mark.asyncio
+async def test_delete_workspace(client: AsyncClient, auth_headers: dict) -> None:
+    create = await client.post(
+        "/api/v1/workspaces",
+        json={"name": "Delete WS", "slug": "delete-ws"},
+        headers=auth_headers,
+    )
+    workspace_id = create.json()["id"]
+    resp = await client.delete(f"/api/v1/workspaces/{workspace_id}", headers=auth_headers)
+    assert resp.status_code == 200
+
+    # Confirm it no longer appears in list
+    list_resp = await client.get("/api/v1/workspaces", headers=auth_headers)
+    ids = [w["id"] for w in list_resp.json()]
+    assert workspace_id not in ids
+
+
+@pytest.mark.asyncio
+async def test_workspace_members_list(client: AsyncClient, auth_headers: dict) -> None:
+    create = await client.post(
+        "/api/v1/workspaces",
+        json={"name": "Members WS", "slug": "members-ws"},
+        headers=auth_headers,
+    )
+    workspace_id = create.json()["id"]
+    resp = await client.get(
+        f"/api/v1/workspaces/{workspace_id}/members",
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    members = resp.json()
+    assert isinstance(members, list)
+    assert len(members) >= 1  # creator is always a member
