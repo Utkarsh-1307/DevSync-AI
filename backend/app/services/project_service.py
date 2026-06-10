@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.exceptions import ForbiddenError, NotFoundError
+from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.models.project import Project, ProjectMembership, ProjectRole
 from app.models.user import WorkspaceRole
 from app.repositories.user_repo import UserRepository
@@ -19,6 +19,14 @@ class ProjectService:
     async def create_project(
         self, workspace_id: UUID, data: ProjectCreate, owner_id: UUID
     ) -> Project:
+        existing = await self._db.execute(
+            select(Project)
+            .where(Project.workspace_id == workspace_id)
+            .where(Project.key == data.key.upper())
+        )
+        if existing.scalar_one_or_none():
+            raise ConflictError(f"Project key '{data.key.upper()}' already exists in this workspace")
+
         project = Project(
             workspace_id=workspace_id,
             name=data.name,
